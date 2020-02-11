@@ -98,7 +98,7 @@ export default Vue.extend({
 /deep/ .footer-row > button {
   display: flex;
   width: 200px;
-  margin-left: 20px;
+  margin-right: 20px;
 }
 
 /deep/ .glue {

@@ -1,6 +1,6 @@
 <template>
   <section class="section">
-    <h2 class="title">Manage Tokens</h2>
+    <h2 class="title">Manage Bootlegs</h2>
     <b-table
       :data="tokenDefinitionsData"
       :paginated="tokenDefinitions.size > pageSize"

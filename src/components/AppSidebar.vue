@@ -8,12 +8,14 @@
     <b-menu-list
       v-for="route in $router.options.routes.filter(r => r.name !== 'About')"
       :label="route.name"
+      :key="route"
       tag="router-link"
       :to="route"
     >
       <b-menu-item
         v-for="subRoute in route.children"
         :label="subRoute.name"
+        :key="subRoute"
         tag="router-link"
         :to="subRoute"
         :active="subRoute.name === $route.name"

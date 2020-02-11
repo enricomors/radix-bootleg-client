@@ -1,6 +1,6 @@
 <template>
   <section class="section">
-    <h2 class="title">Token Loookup</h2>
+    <h2 class="title">Bootleg Loookup</h2>
 
     <b-field class="columns is-gapless has-padding-top-15 has-padding-bottom-15">
       <b-field class="column" message="Lookup token definition details">
