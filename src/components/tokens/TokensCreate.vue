@@ -135,7 +135,7 @@ export default Vue.extend({
       const tokenUri = new RRI(this.identity.address, this.symbol)
       const bootlegger = this.identity.address
 
-      axios.post('https://localhost:3001/save-bootleg', {
+      axios.post('http://localhost:3001/save-bootleg', {
         uri: tokenUri,
         title: this.title,
         artist: this.artist,

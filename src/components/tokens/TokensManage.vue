@@ -2,14 +2,14 @@
   <section class="section">
     <h2 class="title">Manage Bootlegs</h2>
     <b-table
-      :data="tokenDefinitionsData"
-      :paginated="tokenDefinitions.size > pageSize"
+      :data="bootlegs"
+      :paginated="bootlegs.size > pageSize"
       :per-page="pageSize"
       ref="table"
       hoverable
       detailed
       detail-key="description"
-      show-detail-icon
+      show-detail-icongetTokenUnitsGranularity
     >
       <template slot-scope="props">
         <b-table-column width="30">
@@ -18,35 +18,31 @@
         <b-table-column field="symbol" label="Symbol" width="150" sortable>
           {{ props.row.symbol }}
         </b-table-column>
-        <b-table-column field="name" label="Name" sortable>
-          {{ props.row.name }}
+        <b-table-column field="title" label="Title" sortable>
+          {{ props.row.title }}
         </b-table-column>
-        <b-table-column field="granularity" label="Granularity">
-          {{ props.row.getTokenUnitsGranularity() }}
-        </b-table-column>
-        <b-table-column field="supply" label="Supply">
-          {{ props.row.getTokenUnitsTotalSupply() }}
+        <b-table-column field="artist" label="Artist">
+          {{ props.row.artist }}
         </b-table-column>
         <b-table-column label="Actions">
-          <div class="buttons" v-if="props.row.tokenSupplyType === 'mutable'">
+          <div class="buttons">
             <b-button
               type="is-success"
               class="has-padding-right-30 has-padding-left-30"
               icon-left="leaf"
-              @click="openModal(getTokenRRI(props.row), 'mint')"
+              @click="buy()"
             >
-              Mint
+              Buy
             </b-button>
             <b-button
-              type="is-danger"
+              type="is-info"
               class="has-padding-right-30 has-padding-left-30"
               icon-left="fire"
-              @click="openModal(getTokenRRI(props.row), 'burn')"
+              @click="watch()"
             >
-              Burn
+              Watch
             </b-button>
           </div>
-          <span v-else></span>
         </b-table-column>
       </template>
 
@@ -54,7 +50,7 @@
         <table class="table" aria-colspan="4">
           <tr>
             <td class="has-text-weight-bold">Token RRI</td>
-            <td>{{ getTokenRRI(props.row) }}</td>
+            <td>{{ props.row.tokenUri }}</td>
           </tr>
           <tr>
             <td class="has-text-weight-bold">Description</td>
@@ -79,6 +75,8 @@ import TokensManageActionModal from '@/components/tokens/TokensManageModal.vue';
 import { NotificationType } from '@/constants';
 import TableEmpty from '@/components/shared/TableEmpty.vue';
 
+import axios from 'axios';
+
 export default Vue.extend({
   name: 'TokensManage',
   components: {
@@ -86,36 +84,41 @@ export default Vue.extend({
   },
   data() {
     return {
+      bootlegs: [],
       pageSize: 10,
-      tokenDefinitions: new Map<string, RadixTokenDefinition>(),
-      tokenUpdatesSubscription: Subscription.EMPTY as Subscription,
-      tokenUpdatesTracker: 1,
+      // tokenDefinitions: new Map<string, RadixTokenDefinition>(),
+      // tokenUpdatesSubscription: Subscription.EMPTY as Subscription,
+      // tokenUpdatesTracker: 1,
     };
   },
   created() {
     if (this.identity) {
-      this.loadTokenDefinitions();
-      this.subscribeToUpdates();
+      // this.loadTokenDefinitions();
+      // this.subscribeToUpdates();
+      this.loadBootlegsFromDb();
     }
   },
   beforeDestroy() {
-    this.tokenUpdatesSubscription.unsubscribe();
+    // this.tokenUpdatesSubscription.unsubscribe();
   },
   watch: {
     identity(newValue, oldValue) {
-      this.loadTokenDefinitions();
-      this.subscribeToUpdates();
+      // this.loadTokenDefinitions();
+      // this.subscribeToUpdates();
+      this.loadBootlegsFromDb();
     },
   },
   computed: {
     identity(): RadixIdentity {
       return this.$store.state.identity;
     },
+    /*
     tokenDefinitionsData(): any {
       return this.tokenUpdatesTracker && Array.from(this.tokenDefinitions.values());
-    },
+    },*/
   },
   methods: {
+    /*
     loadTokenDefinitions() {
       this.identity.account.tokenDefinitionSystem.tokenDefinitions
         .values()
@@ -128,35 +131,23 @@ export default Vue.extend({
           this.tokenDefinitions.set(this.getTokenRRI(td), td);
           this.tokenUpdatesTracker += 1;
         });
+    },*/
+    loadBootlegsFromDb() {
+      axios.get('http://localhost:3001/bootlegs')
+      .then((response) => {
+        if (response.status == 400) {
+          console.error('Error fetching bootlegs from db')
+        } else {
+          this.bootlegs = response.data
+          console.log('Bootlegs successfully fetched from db')
+        }
+      })
     },
-    mintTokens(tokenReference: string, amount: string) {
-      try {
-        RadixTransactionBuilder.createMintAtom(this.identity.account, tokenReference, new Decimal(amount))
-          .signAndSubmit(this.identity)
-          .subscribe({
-            next: status => this.showStatus(status),
-            complete: () => this.showStatus('Tokens have been minted', NotificationType.SUCCESS),
-            error: error => this.showStatus(error.message, NotificationType.ERROR),
-          });
-      } catch (e) {
-        this.showStatus(e.message, NotificationType.ERROR);
-      }
+    buy() {
+
     },
-    burnTokens(tokenReference: string, amount: string) {
-      try {
-        RadixTransactionBuilder.createBurnAtom(this.identity.account, tokenReference, new Decimal(amount))
-          .signAndSubmit(this.identity)
-          .subscribe({
-            next: status => this.showStatus(status),
-            complete: () => this.showStatus('Tokens have been burned', NotificationType.SUCCESS),
-            error: error => this.showStatus(error.message, NotificationType.ERROR),
-          });
-      } catch (e) {
-        this.showStatus(e.message, NotificationType.ERROR);
-      }
-    },
-    getTokenRRI(td: RadixTokenDefinition) {
-      return '/' + td.address + '/' + td.symbol;
+    watch() {
+
     },
     openModal(tokenReference: string, action: string) {
       this.$buefy.modal.open({
@@ -169,7 +160,6 @@ export default Vue.extend({
         props: {
           tokenRRI: tokenReference,
           tokenAction: action,
-          tokenActionCallback: action === 'mint' ? this.mintTokens : this.burnTokens,
         },
       });
     },
