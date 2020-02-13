@@ -16,13 +16,10 @@
           <div v-if="props.row.iconUrl" class="image is-24x24"><img :src="props.row.iconUrl" alt="" /></div>
         </b-table-column>
         <b-table-column field="symbol" label="Symbol" width="150" sortable>
-          {{ props.row.symbol }}
+          {{ getSymbol(props.row.tokenUri) }}
         </b-table-column>
         <b-table-column field="title" label="Title" sortable>
           {{ props.row.title }}
-        </b-table-column>
-        <b-table-column field="artist" label="Artist">
-          {{ props.row.artist }}
         </b-table-column>
         <b-table-column label="Actions">
           <div class="buttons">
@@ -51,6 +48,10 @@
           <tr>
             <td class="has-text-weight-bold">Token RRI</td>
             <td>{{ props.row.tokenUri }}</td>
+          </tr>
+          <tr>
+            <td class="has-text-weight-bold">Artist address</td>
+            <td>{{ props.row.artist }}</td>
           </tr>
           <tr>
             <td class="has-text-weight-bold">Description</td>
@@ -135,7 +136,7 @@ export default Vue.extend({
     loadBootlegsFromDb() {
       axios.get('http://localhost:3001/bootlegs')
       .then((response) => {
-        if (response.status == 400) {
+        if (response.status === 400) {
           console.error('Error fetching bootlegs from db')
         } else {
           this.bootlegs = response.data
@@ -162,6 +163,9 @@ export default Vue.extend({
           tokenAction: action,
         },
       });
+    },
+    getSymbol(uri: string) {
+      return uri.split('/')[2];
     },
     showStatus(message: string, type?: string) {
       this.$parent.$emit('show-notification', message, type);

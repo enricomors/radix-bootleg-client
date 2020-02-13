@@ -136,12 +136,12 @@ export default Vue.extend({
       const bootlegger = this.identity.address
 
       axios.post('http://localhost:3001/save-bootleg', {
-        uri: tokenUri,
+        uri: tokenUri.toString(),
         title: this.title,
         artist: this.artist,
         description: this.description,
         contentUrl: this.contentUrl,
-        bootlegger: bootlegger
+        bootlegger: bootlegger.toString(),
       }).then(response => {
         console.log('Bootleg saved to database');
         console.log('Token uri ', response);
