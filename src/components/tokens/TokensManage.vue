@@ -77,6 +77,7 @@ import Vue from 'vue';
 import { RadixIdentity, RadixTokenDefinition, RadixTransactionBuilder, RadixAccount, RRI } from 'radixdlt';
 import { Subscription } from 'rxjs';
 import Decimal from 'decimal.js';
+import BN from 'bn.js'
 import TokensManageActionModal from '@/components/tokens/TokensManageModal.vue';
 import { NotificationType } from '@/constants';
 import TableEmpty from '@/components/shared/TableEmpty.vue';
@@ -149,7 +150,17 @@ export default Vue.extend({
       })
     },
     async buy(bootleg: any) {
+      const price = bootleg.price
+      const symbol = 'BTL'
       
+      const franchisorAccount = this.identity.account
+      const funds = franchisorAccount.tokenDefinitionSystem.getTokenDefinition(symbol).totalSupply
+
+      if (funds.toNumber() >= price) {
+        
+      } else {
+        throw new Error("Insufficent funds")
+      }
     },
     watch() {
 
@@ -173,9 +184,6 @@ export default Vue.extend({
     },
     getTokenRRI(td: RadixTokenDefinition) {
       return '/' + td.address + '/' + td.symbol;
-    },
-    hasTokenDefinition(tokenUri: string) {
-      return this.tokenDefinitions.has(tokenUri)
     },
     showStatus(message: string, type?: string) {
       this.$parent.$emit('show-notification', message, type);
