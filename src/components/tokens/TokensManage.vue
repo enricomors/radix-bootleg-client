@@ -89,6 +89,7 @@ export default Vue.extend({
   data() {
     return {
       bootlegs: [],
+      tokenSymbols: [],
       pageSize: 10,
       // tokenDefinitions: new Map<string, RadixTokenDefinition>(),
       // tokenUpdatesSubscription: Subscription.EMPTY as Subscription,
@@ -146,6 +147,9 @@ export default Vue.extend({
           console.log('Bootlegs successfully fetched from db')
         }
       })
+    },
+    hasTokenDefinition(symbol: string) {
+      // return boolean
     },
     buy() {
 
