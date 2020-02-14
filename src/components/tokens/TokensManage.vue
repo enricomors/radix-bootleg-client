@@ -27,20 +27,22 @@
         <b-table-column label="Actions">
           <div class="buttons">
             <b-button
-              type="is-success"
-              class="has-padding-right-30 has-padding-left-30"
-              icon-left="leaf"
-              @click="buy()"
-            >
-              Buy
-            </b-button>
-            <b-button
+              v-if="tokenDefinitions.has(props.row.tokenUri)"
               type="is-info"
               class="has-padding-right-30 has-padding-left-30"
-              icon-left="fire"
+              icon-left="leaf"
               @click="watch()"
             >
               Watch
+            </b-button>
+            <b-button
+              v-else
+              type="is-success"
+              class="has-padding-right-30 has-padding-left-30"
+              icon-left="fire"
+              @click="buy()"
+            >
+              Buy
             </b-button>
           </div>
         </b-table-column>
@@ -89,27 +91,27 @@ export default Vue.extend({
   data() {
     return {
       bootlegs: [],
-      tokenSymbols: [],
+      tokenSymbols: [String],
       pageSize: 10,
-      // tokenDefinitions: new Map<string, RadixTokenDefinition>(),
-      // tokenUpdatesSubscription: Subscription.EMPTY as Subscription,
-      // tokenUpdatesTracker: 1,
+      tokenDefinitions: new Map<string, RadixTokenDefinition>(),
+      tokenUpdatesSubscription: Subscription.EMPTY as Subscription,
+      tokenUpdatesTracker: 1,
     };
   },
   created() {
     if (this.identity) {
-      // this.loadTokenDefinitions();
-      // this.subscribeToUpdates();
+      this.loadTokenDefinitions();
+      this.subscribeToUpdates();
       this.loadBootlegsFromDb();
     }
   },
   beforeDestroy() {
-    // this.tokenUpdatesSubscription.unsubscribe();
+    this.tokenUpdatesSubscription.unsubscribe();
   },
   watch: {
     identity(newValue, oldValue) {
-      // this.loadTokenDefinitions();
-      // this.subscribeToUpdates();
+      this.loadTokenDefinitions();
+      this.subscribeToUpdates();
       this.loadBootlegsFromDb();
     },
   },
@@ -117,13 +119,11 @@ export default Vue.extend({
     identity(): RadixIdentity {
       return this.$store.state.identity;
     },
-    /*
     tokenDefinitionsData(): any {
       return this.tokenUpdatesTracker && Array.from(this.tokenDefinitions.values());
-    },*/
+    },
   },
   methods: {
-    /*
     loadTokenDefinitions() {
       this.identity.account.tokenDefinitionSystem.tokenDefinitions
         .values()
@@ -136,7 +136,7 @@ export default Vue.extend({
           this.tokenDefinitions.set(this.getTokenRRI(td), td);
           this.tokenUpdatesTracker += 1;
         });
-    },*/
+    },
     loadBootlegsFromDb() {
       axios.get('http://localhost:3001/bootlegs')
       .then((response) => {
@@ -147,9 +147,6 @@ export default Vue.extend({
           console.log('Bootlegs successfully fetched from db')
         }
       })
-    },
-    hasTokenDefinition(symbol: string) {
-      // return boolean
     },
     buy() {
 
@@ -173,6 +170,12 @@ export default Vue.extend({
     },
     getSymbol(uri: string) {
       return uri.split('/')[2];
+    },
+    getTokenRRI(td: RadixTokenDefinition) {
+      return '/' + td.address + '/' + td.symbol;
+    },
+    hasTokenDefinition(tokenUri: string) {
+      return this.tokenDefinitions.has(tokenUri)
     },
     showStatus(message: string, type?: string) {
       this.$parent.$emit('show-notification', message, type);
