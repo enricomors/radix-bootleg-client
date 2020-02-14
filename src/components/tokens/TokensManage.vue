@@ -40,7 +40,7 @@
               type="is-success"
               class="has-padding-right-30 has-padding-left-30"
               icon-left="fire"
-              @click="buy()"
+              @click="confirmBootlegPurchase(props.row)"
             >
               Buy
             </b-button>
@@ -74,7 +74,7 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { RadixIdentity, RadixTokenDefinition, RadixTransactionBuilder } from 'radixdlt';
+import { RadixIdentity, RadixTokenDefinition, RadixTransactionBuilder, RadixAccount, RRI } from 'radixdlt';
 import { Subscription } from 'rxjs';
 import Decimal from 'decimal.js';
 import TokensManageActionModal from '@/components/tokens/TokensManageModal.vue';
@@ -148,8 +148,8 @@ export default Vue.extend({
         }
       })
     },
-    buy() {
-
+    async buy(bootleg: any) {
+      
     },
     watch() {
 
@@ -180,6 +180,22 @@ export default Vue.extend({
     showStatus(message: string, type?: string) {
       this.$parent.$emit('show-notification', message, type);
     },
+    confirmBootlegPurchase(bootleg: any) {
+      this.$buefy.dialog.confirm({
+        title: 'Purchase bootleg',
+        message: `Proceeding you will purchase this bootleg.
+                  <br/><br/>
+                  <b>Note: </b> Be sure to have enough funds in your wallet.`,
+        cancelText: 'Cancel',
+        confirmText: 'Proceed',
+        type: 'is-primary',
+        onConfirm: () => {
+          this.buy(bootleg)
+            .then(() => this.showStatus('Bootleg purchased', NotificationType.SUCCESS))
+            .catch(error => this.showStatus(error.message || error, NotificationType.ERROR))
+        },
+      })
+    }
   },
 });
 </script>

@@ -141,7 +141,7 @@ export default Vue.extend({
       const symbol = 'BTL'
       const name = 'Bootleg native coin'
       const description = 'Native coin for bootleg application'
-      const granularity = 1
+      const granularity = 0.01
       const amount = 100
       const iconUrl = 'http://a.b.com/icon.png'
 
