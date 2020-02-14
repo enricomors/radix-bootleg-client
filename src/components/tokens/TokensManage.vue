@@ -21,6 +21,9 @@
         <b-table-column field="title" label="Title" sortable>
           {{ props.row.title }}
         </b-table-column>
+        <b-table-column field="price" label="Price" sortable>
+          {{ props.row.price }}
+        </b-table-column>
         <b-table-column label="Actions">
           <div class="buttons">
             <b-button

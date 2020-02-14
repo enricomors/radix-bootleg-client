@@ -139,6 +139,7 @@ export default Vue.extend({
         uri: tokenUri.toString(),
         title: this.title,
         artist: this.artist,
+        price: this.price,
         description: this.description,
         contentUrl: this.contentUrl,
         bootlegger: bootlegger.toString(),
