@@ -71,7 +71,7 @@
 <script lang="ts">
 import Vue from 'vue';
 import { mapState } from 'vuex';
-import { RadixIdentityManager, RadixKeyStore, RadixRemoteIdentity } from 'radixdlt';
+import { RadixIdentityManager, RadixKeyStore, RadixRemoteIdentity, RadixIdentity, RadixTransactionBuilder, radixUniverse, RadixAccount } from 'radixdlt';
 import { NotificationType } from '@/constants';
 
 export default Vue.extend({
@@ -103,6 +103,7 @@ export default Vue.extend({
     async generateIdentity() {
       const identity = this.identityManager.generateSimpleIdentity();
       await identity.account.openNodeConnection();
+      await this.getTokensFromFaucet(identity);
 
       this.$store.commit('setIdentity', identity);
 
@@ -135,6 +136,32 @@ export default Vue.extend({
       await identity.account.openNodeConnection();
 
       this.$store.commit('setIdentity', identity);
+    },
+    async getTokensFromFaucet(myIdentity: RadixIdentity) {
+      const symbol = 'BTL'
+      const name = 'Bootleg native coin'
+      const description = 'Native coin for bootleg application'
+      const granularity = 1
+      const amount = 100
+      const iconUrl = 'http://a.b.com/icon.png'
+
+      new RadixTransactionBuilder().createTokenSingleIssuance(
+        myIdentity.account,
+        name,
+        symbol,
+        description,
+        granularity,
+        amount,
+        iconUrl,
+      ).signAndSubmit(myIdentity)
+      .subscribe({
+        next: status => { this.showStatus(status) },
+        complete: () => {
+          const message = 'Token defintion has been created'
+          this.showStatus(message, NotificationType.SUCCESS)
+        },
+        error: error => { this.showStatus(error, NotificationType.ERROR) }
+      })
     },
     confirmIdentityRandom() {
       this.$buefy.dialog.confirm({
