@@ -95,6 +95,7 @@ export default Vue.extend({
       pageSize: 10,
       tokenDefinitions: new Map<string, RadixTokenDefinition>(),
       tokenUpdatesSubscription: Subscription.EMPTY as Subscription,
+      tokenRequestSubscription: Subscription.EMPTY as Subscription,
       tokenUpdatesTracker: 1,
     };
   },
@@ -102,16 +103,19 @@ export default Vue.extend({
     if (this.identity) {
       this.loadTokenDefinitions();
       this.subscribeToUpdates();
+      this.subscribeToTokenReqs();
       this.loadBootlegsFromDb();
     }
   },
   beforeDestroy() {
     this.tokenUpdatesSubscription.unsubscribe();
+    this.tokenRequestSubscription.unsubscribe();
   },
   watch: {
     identity(newValue, oldValue) {
       this.loadTokenDefinitions();
       this.subscribeToUpdates();
+      this.subscribeToTokenReqs();
       this.loadBootlegsFromDb();
     },
   },
@@ -137,6 +141,14 @@ export default Vue.extend({
           this.tokenUpdatesTracker += 1;
         });
     },
+    subscribeToTokenReqs() {
+      this.tokenRequestSubscription = this.identity.account.messagingSystem
+        .messageSubject.subscribe(message => {
+          if (message.action === 'SEND_TOKEN') {
+            
+          }
+        })
+    },
     loadBootlegsFromDb() {
       axios.get('http://localhost:3001/bootlegs')
       .then((response) => {
@@ -151,21 +163,49 @@ export default Vue.extend({
     async buy(bootleg: any) {
       const price = bootleg.price
       const symbol = 'BTL'
+
       const bootlegger = bootleg.bootlegger
       const artist = bootleg.artist
       const franchisors = bootleg.franchisors
+      // the user which is buyng the bootleg
       const newFranchisor = this.identity.account
-      const funds = newFranchisor.tokenDefinitionSystem.getTokenDefinition(symbol).totalSupply
+
+      const funds = newFranchisor
+        .tokenDefinitionSystem
+        .getTokenDefinition(symbol).totalSupply
 
       franchisors.push(artist).push(bootlegger)
 
       if (funds.toNumber() >= price) {
-        this.sendTransaction(bootleg, franchisors)  
+        this.sendTransaction(bootleg, franchisors)
+          .then(() => {
+            if (franchisors.length > 0) {
+              const lastFranchisor = franchisors[franchisors.length - 1]
+              this.requestToken(lastFranchisor, bootleg.tokenUri)
+            } else {
+              this.requestToken(bootlegger, bootleg.tokenUri)
+            }
+          })
+          .catch(error => { this.showStatus(error.message || error, NotificationType.ERROR) }) 
       } else {
         throw new Error("Insufficent funds")
       }
     },
-    sendTransaction(bootleg: any, receivers: []) {
+    requestToken(ownerAddress: string, tokenUri: string) {
+      const ownerAccount = RadixAccount.fromAddress(ownerAddress)
+      const payload = JSON.stringify({
+        message: 'SEND',
+        uri: tokenUri
+      })
+      
+      RadixTransactionBuilder.createPayloadAtom(
+        this.identity.account,
+        [ownerAccount],
+        'radix-bootleg',
+        payload,
+      )
+    },
+    async sendTransaction(bootleg: any, receivers: []) {
       const nativeTokenRef = `/${this.identity.account.getAddress}/BTL`
       const senderAccount = this.identity.account
 
@@ -183,9 +223,8 @@ export default Vue.extend({
           RadixTransactionBuilder
             .createTransferAtom(senderAccount, receiverAccount, nativeTokenRef, amount)
             .signAndSubmit(this.identity)
-
-          // send message to owner asking for the token
         }
+        // send message to owner asking for the token
       } else {
         const tokenOwner = RadixAccount.fromAddress(bootleg.bootlegger)
         const artist = RadixAccount.fromAddress(bootleg.artist)
