@@ -174,17 +174,17 @@ export default Vue.extend({
         const ownerAccount = RadixAccount.fromAddress(tokenOwner)
 
         for (let i = 0; i < receivers.length; i++) {
-        const receiver = receivers[i];
-        const receiverAccount = RadixAccount.fromAddress(receiver)
+          const receiver = receivers[i];
+          const receiverAccount = RadixAccount.fromAddress(receiver)
 
-        const price = bootleg.price
-        const amount = price/receivers.length
-        
-        RadixTransactionBuilder
-          .createTransferAtom(senderAccount, receiverAccount, nativeTokenRef, amount)
-          .signAndSubmit(this.identity)
+          const price = bootleg.price
+          const amount = price/receivers.length
+          
+          RadixTransactionBuilder
+            .createTransferAtom(senderAccount, receiverAccount, nativeTokenRef, amount)
+            .signAndSubmit(this.identity)
 
-        // send message to owner asking for the token
+          // send message to owner asking for the token
         }
       } else {
         const tokenOwner = RadixAccount.fromAddress(bootleg.bootlegger)
