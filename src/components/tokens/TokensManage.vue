@@ -74,7 +74,7 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { RadixIdentity, RadixTokenDefinition, RadixTransactionBuilder, RadixAccount, RRI } from 'radixdlt';
+import { RadixIdentity, RadixTokenDefinition, RadixTransactionBuilder, RadixAccount, RRI, RadixAddress } from 'radixdlt';
 import { Subscription } from 'rxjs';
 import Decimal from 'decimal.js';
 import BN from 'bn.js'
@@ -92,7 +92,6 @@ export default Vue.extend({
   data() {
     return {
       bootlegs: [],
-      tokenSymbols: [String],
       pageSize: 10,
       tokenDefinitions: new Map<string, RadixTokenDefinition>(),
       tokenUpdatesSubscription: Subscription.EMPTY as Subscription,
@@ -152,14 +151,56 @@ export default Vue.extend({
     async buy(bootleg: any) {
       const price = bootleg.price
       const symbol = 'BTL'
-      
-      const franchisorAccount = this.identity.account
-      const funds = franchisorAccount.tokenDefinitionSystem.getTokenDefinition(symbol).totalSupply
+      const bootlegger = bootleg.bootlegger
+      const artist = bootleg.artist
+      const franchisors = bootleg.franchisors
+      const newFranchisor = this.identity.account
+      const funds = newFranchisor.tokenDefinitionSystem.getTokenDefinition(symbol).totalSupply
+
+      franchisors.push(artist).push(bootlegger)
 
       if (funds.toNumber() >= price) {
-        
+        this.sendTransaction(bootleg, franchisors)  
       } else {
         throw new Error("Insufficent funds")
+      }
+    },
+    sendTransaction(bootleg: any, receivers: []) {
+      const nativeTokenRef = `/${this.identity.account.getAddress}/BTL`
+      const senderAccount = this.identity.account
+
+      if (receivers.length > 0) {
+        const tokenOwner = receivers[receivers.length - 1]
+        const ownerAccount = RadixAccount.fromAddress(tokenOwner)
+
+        for (let i = 0; i < receivers.length; i++) {
+        const receiver = receivers[i];
+        const receiverAccount = RadixAccount.fromAddress(receiver)
+
+        const price = bootleg.price
+        const amount = price/receivers.length
+        
+        RadixTransactionBuilder
+          .createTransferAtom(senderAccount, receiverAccount, nativeTokenRef, amount)
+          .signAndSubmit(this.identity)
+
+        // send message to owner asking for the token
+        }
+      } else {
+        const tokenOwner = RadixAccount.fromAddress(bootleg.bootlegger)
+        const artist = RadixAccount.fromAddress(bootleg.artist)
+        const bootlegger = RadixAccount.fromAddress(bootleg.bootlegger)
+        const amount = bootleg.price/2
+
+        RadixTransactionBuilder
+          .createTransferAtom(senderAccount, artist, nativeTokenRef, amount)
+          .signAndSubmit(this.identity)
+
+        RadixTransactionBuilder
+          .createTransferAtom(senderAccount, bootlegger, nativeTokenRef, amount)
+          .signAndSubmit(this.identity)
+
+        // send message to owner asking for the token
       }
     },
     watch() {
