@@ -74,6 +74,8 @@ import { mapState } from 'vuex';
 import { RadixIdentityManager, RadixKeyStore, RadixRemoteIdentity, RadixIdentity, RadixTransactionBuilder, radixUniverse, RadixAccount } from 'radixdlt';
 import { NotificationType } from '@/constants';
 
+import axios from 'axios';
+
 export default Vue.extend({
   name: 'IdentityManage',
   data() {
@@ -103,7 +105,7 @@ export default Vue.extend({
     async generateIdentity() {
       const identity = this.identityManager.generateSimpleIdentity();
       await identity.account.openNodeConnection();
-      await this.getTokensFromFaucet(identity);
+      await this.getNativeTokens(identity);
 
       this.$store.commit('setIdentity', identity);
 
@@ -137,12 +139,12 @@ export default Vue.extend({
 
       this.$store.commit('setIdentity', identity);
     },
-    async getTokensFromFaucet(myIdentity: RadixIdentity) {
+    async getNativeTokens(myIdentity: RadixIdentity) {
       const symbol = 'BTL'
       const name = 'Bootleg native coin'
       const description = 'Native coin for bootleg application'
       const granularity = 0.01
-      const amount = 100
+      const amount = 10
       const iconUrl = 'http://a.b.com/icon.png'
 
       new RadixTransactionBuilder().createTokenSingleIssuance(
