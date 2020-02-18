@@ -74,7 +74,14 @@
 
 <script lang="ts">
 import Vue from 'vue';
-import { RadixIdentity, RadixTokenDefinition, RadixTransactionBuilder, RadixAccount, RRI, RadixAddress, radixUniverse } from 'radixdlt';
+import { RadixIdentity, 
+  RadixTokenDefinition, 
+  RadixTransactionBuilder, 
+  RadixAccount, 
+  RRI,
+  RadixAddress, 
+  radixUniverse,
+  RadixLogger } from 'radixdlt';
 import { Subscription } from 'rxjs';
 import Decimal from 'decimal.js';
 import BN from 'bn.js'
@@ -107,6 +114,7 @@ export default Vue.extend({
       this.subscribeToTokenReqs();
       this.loadBootlegsFromDb();
     }
+    RadixLogger.setLevel('DEBUG')
   },
   beforeDestroy() {
     this.tokenUpdatesSubscription.unsubscribe();
@@ -144,7 +152,7 @@ export default Vue.extend({
     },
     subscribeToTokenReqs() {
       this.tokenRequestSubscription = this.identity.account.dataSystem
-        .applicationDataSubject
+        .getApplicationData('radix-bootleg')
         .subscribe(req => {
           try {
             console.log(req);
@@ -171,10 +179,12 @@ export default Vue.extend({
       })
     },
     async buy(bootleg: any) {
-      const price: BN = bootleg.price
-      console.log('price is' + price.toString());
+      const price: number = bootleg.price
+      console.log('bootleg price ' + price.toString());
+    
       const symbol = 'BTL'
-      const tokenUri = `/${this.identity.account.getAddress}/BTL`
+      const tokenUri = `/${this.identity.account.address}/${symbol}`
+      console.log('token uri ' + tokenUri)
 
       const bootlegger = bootleg.bootlegger
       console.log('bootlegger ' + bootlegger);
@@ -188,32 +198,40 @@ export default Vue.extend({
       // the user which is buyng the bootleg
       const newFranchisor = this.identity.account
 
-      const funds =  newFranchisor
+      const funds = newFranchisor
         .tokenDefinitionSystem
         .getTokenDefinition(symbol)
-        .getTotalSupply()
+        .totalSupply
 
-      console.log('total funds: ' + funds)
+      const fundsInNumber = RadixTokenDefinition.fromSubunitsToDecimal(funds)
+      console.log('funds in number ' + fundsInNumber.toNumber());
+      console.log(fundsInNumber.toNumber() > price)
 
-      if (funds.gt(price)) {
+      if (fundsInNumber.toNumber() > price) {
          // send payment to server
          axios.get('http://localhost:3001/request-address')
           .then((resp) => { 
-            console.log('Received server address')
-            const serverAccount = resp.data.address
+            const serverAddress = resp.data.address
+            console.log('Received server address' + resp.data.address)
+            const serverAccount = RadixAccount.fromAddress(serverAddress)
 
             const status = RadixTransactionBuilder.createTransferAtom(
               this.identity.account,
               serverAccount,
-              radixUniverse.nativeToken,
-              price.toNumber()
+              tokenUri,
+              price
             ).signAndSubmit(this.identity)
 
             status.subscribe({
               next: status => this.showStatus(status),
-              complete: () => { 
-                this.requestToken(bootleg.bootlegger, bootleg.tokenUri)
-                this.sendRecipients(artist, bootlegger, franchisors)
+              complete: () => {
+                if (franchisors.length != 0) {
+                  const franchisor = franchisors[franchisors.length - 1]
+                  this.requestToken(franchisor, bootleg.tokenUri)
+                } else {
+                  this.requestToken(bootleg.bootlegger, bootleg.tokenUri)
+                }
+                this.sendRecipients(artist, bootlegger, franchisors, price)
               },
               error: error => { this.showStatus(error, NotificationType.ERROR) }
             })
@@ -237,16 +255,24 @@ export default Vue.extend({
         [ownerAccount],
         'radix-bootleg',
         payload,
-      ).signAndSubmit(this.identity)
-    },
-    sendRecipients(artist: string, bootlegger: string, franchisors: []) {
-      const newFranchisor = this.identity.account
-
-      axios.post('https://localhost:3001/send-recipients', {
-        artist, bootlegger, franchisors, newFranchisor
+      ).signAndSubmit(this.identity).subscribe({
+        next: status => this.showStatus(status),
+        complete: () => { this.showStatus('Request sent', NotificationType.SUCCESS) },
+        error: error => this.showStatus('Error sending bootleg token request ' + error, NotificationType.ERROR)
       })
-      .then()
-      .catch()
+    },
+    sendRecipients(artist: string, bootlegger: string, franchisors: [], price: number) {
+      const newFranchisor = this.identity.address.toString()
+
+      axios.post('http://localhost:3001/send-recipients', {
+        artist, bootlegger, franchisors, newFranchisor, price
+      }).then((res) => {
+        if (res.status === 400) {
+          console.error('Error in payments', res.data.message);
+        } else {
+          console.log('Completed successfully');
+        }
+      })
     },
     sendToken(tokenUri: string, sender: string) {
       const senderAccount = RadixAccount.fromAddress(sender)
