@@ -80,8 +80,7 @@ import { RadixIdentity,
   RadixAccount, 
   RRI,
   RadixAddress, 
-  radixUniverse,
-  RadixLogger } from 'radixdlt';
+  radixUniverse } from 'radixdlt';
 import { Subscription } from 'rxjs';
 import Decimal from 'decimal.js';
 import BN from 'bn.js'
@@ -114,7 +113,6 @@ export default Vue.extend({
       this.subscribeToTokenReqs();
       this.loadBootlegsFromDb();
     }
-    RadixLogger.setLevel('DEBUG')
   },
   beforeDestroy() {
     this.tokenUpdatesSubscription.unsubscribe();
@@ -159,8 +157,8 @@ export default Vue.extend({
             console.log(req.data.payload.data)
             const payload = JSON.parse(req.data.payload.data)
             console.log('payload ' + payload);
-            if (payload.msg === 'SEND') {
-              this.sendToken(payload.uri, payload.sender)
+            if (payload.msg === 'SEND_TOKEN') {
+              this.sendToken(payload.uri, payload.to)
             }
           } catch (error) {
             console.error(error.message || error)
@@ -194,6 +192,8 @@ export default Vue.extend({
       
       const franchisors = bootleg.franchisors
       console.log('franchisors array ' + franchisors);
+
+      const bootlegToken = bootleg.tokenUri
       
       // the user which is buyng the bootleg
       const newFranchisor = this.identity.account
@@ -224,48 +224,22 @@ export default Vue.extend({
 
             status.subscribe({
               next: status => this.showStatus(status),
-              complete: () => {
-                if (franchisors.length != 0) {
-                  const franchisor = franchisors[franchisors.length - 1]
-                  this.requestToken(franchisor, bootleg.tokenUri)
-                } else {
-                  this.requestToken(bootleg.bootlegger, bootleg.tokenUri)
-                }
-                this.sendRecipients(artist, bootlegger, franchisors, price)
+              complete: () => { 
+                this.sendRecipients(bootlegToken, artist, bootlegger, franchisors, price) 
               },
-              error: error => { this.showStatus(error, NotificationType.ERROR) }
+              error: error => this.showStatus(error, NotificationType.ERROR)
             })
-
           }).catch(err => console.error(err))
          // send payload to server
       } else {
         throw new Error("Insufficent funds")
       }
     },
-    requestToken(ownerAddress: string, tokenUri: string) {
-      const ownerAccount = RadixAccount.fromAddress(ownerAddress)
-      const payload = JSON.stringify({
-        message: 'SEND',
-        sender: this.identity.address,
-        uri: tokenUri
-      })
-      
-      RadixTransactionBuilder.createPayloadAtom(
-        this.identity.account,
-        [ownerAccount],
-        'radix-bootleg',
-        payload,
-      ).signAndSubmit(this.identity).subscribe({
-        next: status => this.showStatus(status),
-        complete: () => { this.showStatus('Request sent', NotificationType.SUCCESS) },
-        error: error => this.showStatus('Error sending bootleg token request ' + error, NotificationType.ERROR)
-      })
-    },
-    sendRecipients(artist: string, bootlegger: string, franchisors: [], price: number) {
+    sendRecipients(tokenUri: string, artist: string, bootlegger: string, franchisors: [], price: number) {
       const newFranchisor = this.identity.address.toString()
 
       axios.post('http://localhost:3001/send-recipients', {
-        artist, bootlegger, franchisors, newFranchisor, price
+        tokenUri, artist, bootlegger, franchisors, newFranchisor, price
       }).then((res) => {
         if (res.status === 400) {
           console.error('Error in payments', res.data.message);
